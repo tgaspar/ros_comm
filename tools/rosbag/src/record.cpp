@@ -64,6 +64,7 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       ("bz2,j", "use BZ2 compression")
       ("lz4", "use LZ4 compression")
       ("split", po::value<int>()->implicit_value(0), "Split the bag file and continue recording when maximum size or maximum duration reached.")
+      ("split-mod", po::value<std::string>(), "Split the bag file on a minute modulo and continue recording when maximum size or maximum duration reached.")
       ("max-splits", po::value<int>(), "Keep a maximum of N bag files, when reaching the maximum erase the oldest one to keep a constant number of files.")
       ("topic", po::value< std::vector<std::string> >(), "topic to record")
       ("size", po::value<uint64_t>(), "The maximum size of the bag to record in MB.")
@@ -72,13 +73,13 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       ("tcpnodelay", "Use the TCP_NODELAY transport hint when subscribing to topics.")
       ("udp", "Use the UDP transport hint when subscribing to topics.");
 
-  
+
     po::positional_options_description p;
     p.add("topic", -1);
-    
+
     po::variables_map vm;
-    
-    try 
+
+    try
     {
       po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     } catch (const boost::program_options::invalid_command_line_syntax& e)
@@ -130,6 +131,44 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
         opts.max_size = 1048576 * static_cast<uint64_t>(S);
       }
     }
+    if (vm.count("split-mod"))
+    {
+      ROS_INFO("Splitting with modulo ...");
+
+      // opts.mod = true;
+      std::string modulo_str = vm["split-mod"].as<std::string>();
+
+      double multiplier = 1.0;
+      double duration;
+
+      if (modulo_str == "")
+        throw ros::Exception("Must provide a number when using split-mod");
+
+      std::string unit("");
+
+      std::istringstream iss(modulo_str);
+      if ((iss >> duration).fail())
+        throw ros::Exception("Modulo number must start with a floating point number.");
+
+      if ( (!iss.eof() && ((iss >> unit).fail())) )
+      {
+        throw ros::Exception("Modulo number unit must be s, m, or h");
+      }
+      if (unit == std::string(""))
+        multiplier = 1.0;
+      else if (unit == std::string("s"))
+        multiplier = 1.0;
+      else if (unit == std::string("m"))
+        multiplier = 60.0;
+      else if (unit == std::string("h"))
+        multiplier = 3600.0;
+      else
+        throw ros::Exception("Modulo number must be s, m, or h");
+
+      opts.mod_splits = duration * multiplier;
+      opts.split_mod = true;
+    }
+
     if(vm.count("max-splits"))
     {
         if(!opts.split)
@@ -228,7 +267,7 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       else
         throw ros::Exception("Duration unit must be s, m, or h");
 
-      
+
       opts.max_duration = ros::Duration(duration * multiplier);
       if (opts.max_duration <= ros::Duration(0))
         throw ros::Exception("Duration must be positive.");
@@ -310,6 +349,6 @@ int main(int argc, char** argv) {
     // Run the recorder
     rosbag::Recorder recorder(opts);
     int result = recorder.run();
-    
+
     return result;
 }
