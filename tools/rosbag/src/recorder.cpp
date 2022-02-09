@@ -175,7 +175,7 @@ int Recorder::run() {
     start_time_ = ros::Time::now();
 
     // TIMO ADDED
-    start_mod_ = 0;
+    start_mod_ = -1;
 
     // Don't bother doing anything if we never got a valid time
     if (!nh.ok())
@@ -395,6 +395,8 @@ void Recorder::updateFilenames() {
         parts.push_back(timeToStr(ros::WallTime::now()));
     if (options_.split)
         parts.push_back(boost::lexical_cast<string>(split_count_));
+    if (options_.split_mod)
+        parts.push_back(boost::lexical_cast<string>(split_count_));
 
     if (parts.size() == 0)
     {
@@ -521,22 +523,43 @@ bool Recorder::checkMod(const ros::Time& t)
 {
     if (options_.split_mod)
     {
-        std::time_t time = t.toSec();
+        int mod_decision;
+        std::time_t wall_clock = t.toSec();
         int split_val = options_.mod_splits;
-        const std::tm calendar_time = *std::localtime( std::addressof(time));
+        const std::tm calendar_time = *std::localtime( std::addressof(wall_clock));
+
+        int current_time;
         int current_sec = calendar_time.tm_sec;
-        int mod_sec = current_sec % split_val;
-        if (mod_sec == 0 && current_sec != start_mod_)
+        int current_min = calendar_time.tm_min;
+        int current_hour = calendar_time.tm_hour;
+        if (split_val < 60){
+            mod_decision = current_sec % split_val;
+            current_time = current_sec;
+        }
+        else if (split_val < 3600){
+            mod_decision = current_min % (split_val / 60);
+            current_time = current_min;
+        }
+        else if (split_val > 3600){
+            mod_decision = current_hour % (split_val / 3600);
+            current_time = current_hour;
+        }
+
+        // Do this if it's the first run
+        if (start_mod_ == -1)
+            start_mod_ = current_time;
+
+        if (mod_decision == 0 && current_time != start_mod_)
         {
-            start_mod_ = current_sec;
+            start_mod_ = current_time;
             stopWriting();
+            split_count_++;
             startWriting();
         }
         return true;
     }
     return false;
 }
-
 
 //! Thread that actually does writing to file.
 void Recorder::doRecord() {
