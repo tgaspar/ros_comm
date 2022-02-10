@@ -98,7 +98,6 @@ struct ROSBAG_DECL RecorderOptions
     bool            snapshot;
     bool            verbose;
     bool            publish;
-    bool            repeat_latched;
     CompressionType compression;
     std::string     prefix;
     std::string     name;
@@ -107,8 +106,10 @@ struct ROSBAG_DECL RecorderOptions
     uint32_t        chunk_size;
     uint32_t        limit;
     bool            split;
+    bool            split_mod;
     uint64_t        max_size;
     uint32_t        max_splits;
+    uint32_t        mod_splits;
     ros::Duration   max_duration;
     std::string     node;
     unsigned long long min_space;
@@ -149,6 +150,8 @@ private:
     void checkNumSplits();
     bool checkSize();
     bool checkDuration(const ros::Time&);
+    bool checkMod(const ros::Time&);
+    int getCurrentTime();
     void doRecordSnapshotter();
     void doCheckMaster(ros::TimerEvent const& e, ros::NodeHandle& node_handle);
 
@@ -171,8 +174,6 @@ private:
 
     int                           exit_code_;            //!< eventual exit code
 
-    std::map<std::pair<std::string, std::string>, OutgoingMessage> latched_msgs_;
-
     boost::condition_variable_any queue_condition_;      //!< conditional variable for queue
     boost::mutex                  queue_mutex_;          //!< mutex for queue
     std::queue<OutgoingMessage>*  queue_;                //!< queue for storing
@@ -186,6 +187,7 @@ private:
     ros::Time                     last_buffer_warn_;
 
     ros::Time                     start_time_;
+    int                           start_mod_;
 
     bool                          writing_enabled_;
     boost::mutex                  check_disk_mutex_;
