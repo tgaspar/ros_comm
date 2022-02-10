@@ -71,7 +71,8 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       ("duration", po::value<std::string>(), "Record a bag of maximum duration in seconds, unless 'm', or 'h' is appended.")
       ("node", po::value<std::string>(), "Record all topics subscribed to by a specific node.")
       ("tcpnodelay", "Use the TCP_NODELAY transport hint when subscribing to topics.")
-      ("udp", "Use the UDP transport hint when subscribing to topics.");
+      ("udp", "Use the UDP transport hint when subscribing to topics.")
+      ("repeat-latched", "Repeat latched msgs at the start of each new bag file.");
 
 
     po::positional_options_description p;
@@ -108,6 +109,8 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       opts.quiet = true;
     if (vm.count("publish"))
       opts.publish = true;
+    if (vm.count("repeat-latched"))
+      opts.repeat_latched = true;
     if (vm.count("output-prefix"))
     {
       opts.prefix = vm["output-prefix"].as<std::string>();
@@ -130,6 +133,17 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
           throw ros::Exception("Split size must be 0 or positive");
         opts.max_size = 1048576 * static_cast<uint64_t>(S);
       }
+    }
+    if(vm.count("max-splits"))
+    {
+        if(!opts.split)
+        {
+            ROS_WARN("--max-splits is ignored without --split");
+        }
+        else
+        {
+            opts.max_splits = vm["max-splits"].as<int>();
+        }
     }
     if (vm.count("split-mod"))
     {
@@ -167,18 +181,6 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
 
       opts.mod_splits = duration * multiplier;
       opts.split_mod = true;
-    }
-
-    if(vm.count("max-splits"))
-    {
-        if(!opts.split)
-        {
-            ROS_WARN("--max-splits is ignored without --split");
-        }
-        else
-        {
-            opts.max_splits = vm["max-splits"].as<int>();
-        }
     }
     if (vm.count("buffsize"))
     {
