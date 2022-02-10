@@ -150,6 +150,7 @@ private:
     void checkNumSplits();
     bool checkSize();
     bool checkDuration(const ros::Time&);
+    bool checkMod(const ros::Time&);
     int getCurrentTime();
     void doRecordSnapshotter();
     void doCheckMaster(ros::TimerEvent const& e, ros::NodeHandle& node_handle);
