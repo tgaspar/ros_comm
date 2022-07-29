@@ -316,12 +316,24 @@ std::string Recorder::timeToStr(T ros_t)
 {
     (void)ros_t;
     std::stringstream msg;
-    const boost::posix_time::ptime now=
-        boost::posix_time::second_clock::local_time();
+
+    const boost::posix_time::ptime now= boost::posix_time::from_time_t(ros_t.toSec());
+
+    boost::posix_time::time_duration  time_offset_ =
+         boost::posix_time::microsec_clock::local_time() - now;
+
+    // We make sure to not have a rounding problem in case of time de-sync
+    if (time_offset_.seconds() > 55){
+        time_offset_ += boost::posix_time::hours(1);
+        ROS_WARN_STREAM("It seems like the system time is behind the ROS time. Adjusting the offset by one hour!");
+    }
+
     boost::posix_time::time_facet *const f=
         new boost::posix_time::time_facet("%Y-%m-%d-%H-%M-%S");
+
     msg.imbue(std::locale(msg.getloc(),f));
-    msg << now;
+    msg << now + boost::posix_time::time_duration(time_offset_.hours(), 0, 0, 0);
+
     return msg.str();
 }
 
