@@ -325,8 +325,6 @@ std::string Recorder::timeToStr(T ros_t)
         new boost::posix_time::time_facet("%Y-%m-%d-%H-%M-%S");
 
     msg.imbue(std::locale(msg.getloc(),f));
-
-
     msg << now_round;
 
     return msg.str();
