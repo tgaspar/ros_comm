@@ -316,12 +316,17 @@ std::string Recorder::timeToStr(T ros_t)
 {
     (void)ros_t;
     std::stringstream msg;
-    const boost::posix_time::ptime now=
-        boost::posix_time::second_clock::local_time();
+
+    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
+    const boost::posix_time::ptime now_round = boost::posix_time::ptime(
+        now.date(), boost::posix_time::seconds((now.time_of_day().total_microseconds() + 500000) / 1000000));
+
     boost::posix_time::time_facet *const f=
         new boost::posix_time::time_facet("%Y-%m-%d-%H-%M-%S");
+
     msg.imbue(std::locale(msg.getloc(),f));
-    msg << now;
+    msg << now_round;
+
     return msg.str();
 }
 
